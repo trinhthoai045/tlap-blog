@@ -47,7 +47,9 @@ import {
   Pin,
   List,
   ZoomIn,
-  Heart
+  Heart,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import {
@@ -118,6 +120,7 @@ const DEFAULT_PROFILE = {
   showStats: true,
   authorName: 'Thoại',
   bio: 'Xin chào! Mình là Thoại. Đây là không gian lưu trữ những dự án cá nhân mình đang xây dựng và các kiến thức chắt lọc được qua từng ngày.\n\nMỗi tối mình dành 30 phút để viết lại một điều mới — vừa để hệ thống hóa tư duy, vừa để lưu lại dấu ấn trên hành trình học hỏi.',
+  phone: '',
   zalo: '',
   facebook: '',
   github: 'https://github.com',
@@ -132,6 +135,22 @@ function buildZaloHref(raw = '') {
   const digits = clean.replace(/[^0-9]/g, '');
   return digits ? `https://zalo.me/${digits}` : '';
 }
+
+function buildPhoneHref(raw = '') {
+  const clean = raw.trim().replace(/[^0-9+]/g, '');
+  return clean ? `tel:${clean}` : '';
+}
+
+const TLAP_FAVICON_DATA_URI =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">' +
+      '<rect width="64" height="64" rx="14" fill="#111113"/>' +
+      '<g transform="translate(14,14) scale(1.2)" fill="#FFFFFF">' +
+      '<path d="M10 0H30V20H20V10H10V0Z"/>' +
+      '<path d="M0 10H10V20H20V30H10A10 10 0 0 1 0 20V10Z"/>' +
+      '</g></svg>'
+  );
 
 function formatDateVN(timestamp) {
   if (!timestamp) return '';
@@ -439,6 +458,100 @@ function TlapLogoMark({ className = 'w-8 h-8' }) {
       {/* Khối bo góc dưới trái */}
       <path d="M0 10H10V20H20V30H10A10 10 0 0 1 0 20V10Z" fill="currentColor" />
     </svg>
+  );
+}
+
+// ============================================================================
+// CỤM NÚT LIÊN HỆ NỔI GÓC PHẢI DƯỚI (ZALO, FACEBOOK, ĐIỆN THOẠI)
+// ============================================================================
+function FloatingContactWidget({ profile }) {
+  const zaloHref = buildZaloHref(profile?.zalo);
+  const facebookHref = (profile?.facebook || '').trim();
+  const phoneHref = buildPhoneHref(profile?.phone);
+  const hasAnyContact = Boolean(zaloHref || facebookHref || phoneHref);
+
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 640;
+    }
+    return true;
+  });
+
+  if (!hasAnyContact) return null;
+
+  return (
+    <div className="fixed bottom-5 right-4 sm:right-6 z-40 flex flex-col items-end gap-3 select-none">
+      {expanded && (
+        <div className="flex flex-col items-end gap-3">
+          {zaloHref && (
+            <a
+              href={zaloHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2.5"
+            >
+              <span className="relative px-3.5 py-2 rounded-lg bg-[#0078D4] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#0064B3] transition-colors whitespace-nowrap">
+                Chat Zalo
+                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#0078D4] group-hover:border-l-[#0064B3] transition-colors" />
+              </span>
+              <span className="w-12 h-12 rounded-full bg-white text-[#0068FF] border-2 border-[#0068FF]/20 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <ZaloIcon className="w-7 h-7" />
+              </span>
+            </a>
+          )}
+
+          {facebookHref && (
+            <a
+              href={facebookHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2.5"
+            >
+              <span className="relative px-3.5 py-2 rounded-lg bg-[#1877F2] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#1464CC] transition-colors whitespace-nowrap">
+                Facebook
+                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#1877F2] group-hover:border-l-[#1464CC] transition-colors" />
+              </span>
+              <span className="w-12 h-12 rounded-full bg-[#1877F2] text-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <FacebookIcon className="w-6 h-6" />
+              </span>
+            </a>
+          )}
+
+          {phoneHref && (
+            <a
+              href={phoneHref}
+              className="group flex items-center gap-2.5"
+            >
+              <span className="relative px-3.5 py-2 rounded-lg bg-[#0078D4] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#0064B3] transition-colors whitespace-nowrap">
+                Gọi {profile.phone.trim()}
+                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#0078D4] group-hover:border-l-[#0064B3] transition-colors" />
+              </span>
+              <span className="w-12 h-12 rounded-full bg-[#68B817] text-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Phone className="w-5 h-5 fill-current" />
+              </span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Nút đóng / mở màu cam giống mẫu */}
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-label={expanded ? 'Thu gọn nút liên hệ' : 'Mở kênh liên hệ nhanh'}
+        title={expanded ? 'Thu gọn' : 'Liên hệ nhanh'}
+        className="relative w-12 h-12 rounded-full bg-[#F37B21] hover:bg-[#E06A12] text-white shadow-lg flex items-center justify-center transition-transform active:scale-95"
+      >
+        {!expanded && (
+          <span className="absolute inset-0 rounded-full bg-[#F37B21] opacity-40 animate-ping pointer-events-none" />
+        )}
+        {expanded ? (
+          <X className="w-6 h-6 stroke-[2.75]" />
+        ) : (
+          <MessageCircle className="w-6 h-6" />
+        )}
+      </button>
+    </div>
   );
 }
 
@@ -1074,6 +1187,25 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Tự động tích hợp Logo TLAP lên tab trình duyệt (Favicon) & Tiêu đề trang
+  useEffect(() => {
+    try {
+      const blogTitle = profile.blogName || 'TLAP';
+      document.title = `${blogTitle} — Blog cá nhân & Dự án`;
+
+      let faviconLink = document.querySelector("link[rel~='icon']");
+      if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+      }
+      faviconLink.type = 'image/svg+xml';
+      faviconLink.href = TLAP_FAVICON_DATA_URI;
+    } catch {
+      // Bỏ qua nếu môi trường sandbox hạn chế chỉnh sửa head
+    }
+  }, [profile.blogName]);
 
   // Đồng bộ URL Hash (#post=ID) để chia sẻ link trực tiếp từng bài viết
   useEffect(() => {
@@ -1832,6 +1964,7 @@ export default function App() {
     }
 
     try {
+      let savedId = editingPostId;
       if (db && user) {
         const postsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'posts');
         if (editingPostId) {
@@ -1840,6 +1973,7 @@ export default function App() {
           setSelectedPostId(editingPostId);
         } else {
           const created = await addDoc(postsColRef, { ...payload, createdAt: now });
+          savedId = created.id;
           setSelectedPostId(created.id);
         }
       } else {
@@ -1850,6 +1984,7 @@ export default function App() {
           setSelectedPostId(editingPostId);
         } else {
           const id = `local-${now}`;
+          savedId = id;
           setPosts((prev) => [{ id, ...payload, createdAt: now }, ...prev]);
           setSelectedPostId(id);
         }
@@ -1866,7 +2001,6 @@ export default function App() {
         // Bỏ qua
       }
       setAutoSavedAt(null);
-      const savedId = editingPostId || selectedPostId;
       setView('reader');
       if (savedId) {
         updateUrlHash(`#post=${encodeURIComponent(savedId)}`);
@@ -3145,7 +3279,8 @@ export default function App() {
               )}
 
               {/* Hộp liên hệ tác giả cuối bài viết */}
-              {(buildZaloHref(profile.zalo) ||
+              {(buildPhoneHref(profile.phone) ||
+                buildZaloHref(profile.zalo) ||
                 profile.facebook ||
                 profile.github ||
                 profile.email) && (
@@ -3159,6 +3294,15 @@ export default function App() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {buildPhoneHref(profile.phone) && (
+                      <a
+                        href={buildPhoneHref(profile.phone)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#68B817] hover:bg-[#5AA112] text-white shadow-sm transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>{profile.phone}</span>
+                      </a>
+                    )}
                     {buildZaloHref(profile.zalo) && (
                       <a
                         href={buildZaloHref(profile.zalo)}
@@ -3690,6 +3834,15 @@ export default function App() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-100 dark:border-zinc-800">
+                      {buildPhoneHref(profile.phone) && (
+                        <a
+                          href={buildPhoneHref(profile.phone)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#68B817] hover:bg-[#5AA112] text-white shadow-sm transition-colors"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>{profile.phone}</span>
+                        </a>
+                      )}
                       {buildZaloHref(profile.zalo) && (
                         <a
                           href={buildZaloHref(profile.zalo)}
@@ -3896,7 +4049,21 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="grid sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
+                            Số điện thoại / Hotline (để trống để ẩn)
+                          </label>
+                          <input
+                            type="tel"
+                            value={profileDraft.phone || ''}
+                            onChange={(e) =>
+                              setProfileDraft({ ...profileDraft, phone: e.target.value })
+                            }
+                            placeholder="VD: 0912345678"
+                            className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                          />
+                        </div>
                         <div>
                           <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
                             Số điện thoại hoặc Link Zalo (để trống để ẩn)
@@ -3930,7 +4097,7 @@ export default function App() {
                       <div className="grid sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
-                            GitHub URL (để trống để ẩn)
+                            Link GitHub (để trống để ẩn)
                           </label>
                           <input
                             type="url"
@@ -3938,12 +4105,13 @@ export default function App() {
                             onChange={(e) =>
                               setProfileDraft({ ...profileDraft, github: e.target.value })
                             }
+                            placeholder="https://github.com/..."
                             className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                           />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
-                            Website (để trống để ẩn)
+                            Website cá nhân (để trống để ẩn)
                           </label>
                           <input
                             type="url"
@@ -3951,6 +4119,7 @@ export default function App() {
                             onChange={(e) =>
                               setProfileDraft({ ...profileDraft, website: e.target.value })
                             }
+                            placeholder="https://..."
                             className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                           />
                         </div>
@@ -3964,13 +4133,14 @@ export default function App() {
                             onChange={(e) =>
                               setProfileDraft({ ...profileDraft, email: e.target.value })
                             }
+                            placeholder="you@example.com"
                             className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2">
+                    <div className="flex justify-end gap-2 pt-4 border-t border-stone-200 dark:border-zinc-800">
                       <button
                         type="button"
                         onClick={() => setEditingProfile(false)}
@@ -4062,6 +4232,9 @@ export default function App() {
           </button>
         )}
 
+        {/* CỤM NÚT LIÊN HỆ NỔI GÓC PHẢI DƯỚI (ẨN KHI ĐANG SOẠN BÀI) */}
+        {view !== 'editor' && <FloatingContactWidget profile={profile} />}
+
         {/* HỘP THOẠI ĐĂNG NHẬP / THIẾT LẬP ADMIN */}
         <AdminAuthModal
           isOpen={showAdminModal}
@@ -4139,7 +4312,7 @@ export default function App() {
 
         {/* THÔNG BÁO TOAST */}
         {toast && (
-          <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-stone-800 dark:border-zinc-200 text-sm font-medium">
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-stone-800 dark:border-zinc-200 text-sm font-medium whitespace-nowrap">
             {toast.type === 'error' ? (
               <AlertCircle className="w-4 h-4 text-rose-400 dark:text-rose-600 shrink-0" />
             ) : (
