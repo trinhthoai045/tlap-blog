@@ -11,6 +11,8 @@ import {
   Trash2,
   Download,
   ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   Play,
   Pause,
   RotateCcw,
@@ -27,6 +29,7 @@ import {
   Send,
   Calendar,
   Copy,
+  Share2,
   Mail,
   Globe,
   CheckCircle2,
@@ -113,10 +116,20 @@ const DEFAULT_PROFILE = {
   showStats: true,
   authorName: 'Thoại',
   bio: 'Xin chào! Mình là Thoại. Đây là không gian lưu trữ những dự án cá nhân mình đang xây dựng và các kiến thức chắt lọc được qua từng ngày.\n\nMỗi tối mình dành 30 phút để viết lại một điều mới — vừa để hệ thống hóa tư duy, vừa để lưu lại dấu ấn trên hành trình học hỏi.',
+  zalo: '',
+  facebook: '',
   github: 'https://github.com',
   website: '',
   email: 'trinhthoai045@gmail.com'
 };
+
+function buildZaloHref(raw = '') {
+  const clean = raw.trim();
+  if (!clean) return '';
+  if (/^https?:\/\//i.test(clean)) return clean;
+  const digits = clean.replace(/[^0-9]/g, '');
+  return digits ? `https://zalo.me/${digits}` : '';
+}
 
 function formatDateVN(timestamp) {
   if (!timestamp) return '';
@@ -375,8 +388,24 @@ Hãy ưu tiên những cái tên rõ nghĩa như \`canEdit\`, \`isUploadingImage
 }
 
 // ============================================================================
-// LOGO THƯƠNG HIỆU TLAP & ICON GITHUB (SVG SẮC NÉT, TỰ ĐỔI MÀU SÁNG/TỐI)
+// LOGO THƯƠNG HIỆU TLAP & ICON MẠNG XÃ HỘI (SVG SẮC NÉT)
 // ============================================================================
+function ZaloIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.49 2C6.89 2 2.4 6.13 2.4 11.22c0 2.86 1.43 5.42 3.68 7.11-.14.95-.59 2.38-1.41 3.4-.2.25-.02.63.3.59 1.66-.21 3.55-.84 4.71-1.45.89.22 1.83.34 2.81.34 5.6 0 10.11-4.13 10.11-9.22S18.09 2 12.49 2zm-4.1 11.88H5.48c-.33 0-.56-.35-.41-.64l2.22-4.12H5.56a.45.45 0 0 1 0-.9h2.76c.33 0 .56.34.41.64l-2.21 4.12h1.87a.45.45 0 0 1 0 .9zm3.54-.45a.45.45 0 0 1-.9 0v-.24a1.9 1.9 0 0 1-1.26.47c-1.1 0-1.98-.94-1.98-2.1s.88-2.1 1.98-2.1c.48 0 .92.18 1.26.47v-.02a.45.45 0 0 1 .9 0v3.52zm1.89 0a.45.45 0 0 1-.9 0V7.96a.45.45 0 0 1 .9 0v5.47zm3.43.23c-1.15 0-2.08-.94-2.08-2.1s.93-2.1 2.08-2.1 2.08.94 2.08 2.1-.93 2.1-2.08 2.1zm-7.36-3.3c-.6 0-1.08.53-1.08 1.2s.48 1.2 1.08 1.2 1.08-.53 1.08-1.2-.48-1.2-1.08-1.2zm7.36 0c-.65 0-1.18.54-1.18 1.2s.53 1.2 1.18 1.2 1.18-.54 1.18-1.2-.53-1.2-1.18-1.2z" />
+    </svg>
+  );
+}
+
+function FacebookIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+    </svg>
+  );
+}
+
 function GithubIcon({ className = 'w-4 h-4' }) {
   return (
     <svg
@@ -905,24 +934,6 @@ function AdminAuthModal({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-stone-600 dark:text-zinc-300 mb-1">
-              Mật khẩu
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={
-                isProductionAuth
-                  ? 'Nhập mật khẩu tài khoản Firebase'
-                  : 'Nhập mật khẩu (tối thiểu 4 ký tự)'
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-            />
-          </div>
-
           {!isConfigured && (
             <div>
               <label className="block text-xs font-medium text-stone-600 dark:text-zinc-300 mb-1">
@@ -967,8 +978,22 @@ function AdminAuthModal({
 // COMPONENT CHÍNH (APP)
 // ============================================================================
 export default function App() {
-  // Giao diện Sáng / Tối
-  const [darkMode, setDarkMode] = useState(false);
+  // Giao diện Sáng / Tối (tự nhớ lựa chọn của người đọc)
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem('tlap_dark_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tlap_dark_mode', String(darkMode));
+    } catch {
+      // Bỏ qua nếu trình duyệt chặn localStorage
+    }
+  }, [darkMode]);
 
   // Firebase Auth & Dữ liệu
   const [user, setUser] = useState(null);
@@ -1008,9 +1033,10 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Lightbox phóng to ảnh & Thanh tiến độ đọc
+  // Lightbox phóng to ảnh, Thanh tiến độ đọc & Nút lên đầu trang
   const [lightboxImage, setLightboxImage] = useState(null);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Chỉnh sửa hồ sơ
   const [editingProfile, setEditingProfile] = useState(false);
@@ -1034,14 +1060,16 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Tính thanh tiến độ đọc khi ở chế độ đọc bài viết
+  // Theo dõi cuộn trang: thanh tiến độ đọc & nút lên đầu trang
   useEffect(() => {
-    if (view !== 'reader') {
-      setReadingProgress(0);
-      return;
-    }
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      setShowScrollTop(scrollTop > 420);
+
+      if (view !== 'reader') {
+        setReadingProgress(0);
+        return;
+      }
       const docHeight =
         document.documentElement.scrollHeight - document.documentElement.clientHeight;
       if (docHeight <= 0) {
@@ -1231,7 +1259,12 @@ export default function App() {
   // DỮ LIỆU DẪN XUẤT
   // --------------------------------------------------------------------------
   const visiblePosts = useMemo(() => {
-    return canEdit ? posts : posts.filter((p) => p.status === 'published');
+    const list = canEdit ? posts : posts.filter((p) => p.status === 'published');
+    return [...list].sort((a, b) => {
+      const pinDiff = (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
+      if (pinDiff !== 0) return pinDiff;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
   }, [posts, canEdit]);
 
   const stats = useMemo(() => {
@@ -1259,28 +1292,22 @@ export default function App() {
   }, [visiblePosts]);
 
   const filteredPosts = useMemo(() => {
-    return visiblePosts
-      .filter((post) => {
-        if (activeTab === 'project' && post.category !== 'project') return false;
-        if (activeTab === 'knowledge' && post.category !== 'knowledge') return false;
-        if (activeTab === 'draft' && post.status !== 'draft') return false;
-        if (selectedTag && !(post.tags || []).includes(selectedTag)) return false;
+    return visiblePosts.filter((post) => {
+      if (activeTab === 'project' && post.category !== 'project') return false;
+      if (activeTab === 'knowledge' && post.category !== 'knowledge') return false;
+      if (activeTab === 'draft' && post.status !== 'draft') return false;
+      if (selectedTag && !(post.tags || []).includes(selectedTag)) return false;
 
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const inTitle = (post.title || '').toLowerCase().includes(q);
-          const inSummary = (post.summary || '').toLowerCase().includes(q);
-          const inContent = (post.content || '').toLowerCase().includes(q);
-          const inTags = (post.tags || []).some((t) => t.toLowerCase().includes(q));
-          return inTitle || inSummary || inContent || inTags;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        const pinDiff = (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
-        if (pinDiff !== 0) return pinDiff;
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const inTitle = (post.title || '').toLowerCase().includes(q);
+        const inSummary = (post.summary || '').toLowerCase().includes(q);
+        const inContent = (post.content || '').toLowerCase().includes(q);
+        const inTags = (post.tags || []).some((t) => t.toLowerCase().includes(q));
+        return inTitle || inSummary || inContent || inTags;
+      }
+      return true;
+    });
   }, [visiblePosts, activeTab, selectedTag, searchQuery]);
 
   const selectedPost = useMemo(
@@ -1292,6 +1319,18 @@ export default function App() {
     () => (selectedPost ? extractHeadings(selectedPost.content || '') : []),
     [selectedPost]
   );
+
+  // Bài liền kề (Bài mới hơn / Bài cũ hơn) khi đọc
+  const adjacentPosts = useMemo(() => {
+    if (!selectedPost) return { newer: null, older: null };
+    const readableList = visiblePosts.filter((p) => p.status === 'published' || p.id === selectedPost.id);
+    const idx = readableList.findIndex((p) => p.id === selectedPost.id);
+    if (idx === -1) return { newer: null, older: null };
+    return {
+      newer: idx > 0 ? readableList[idx - 1] : null,
+      older: idx < readableList.length - 1 ? readableList[idx + 1] : null
+    };
+  }, [visiblePosts, selectedPost]);
 
   // --------------------------------------------------------------------------
   // XÁC THỰC ADMIN
@@ -1366,7 +1405,7 @@ export default function App() {
         }
         return {
           ok: false,
-          message: 'Không thể đăng nhập. Hãy kiểm tra lại cấu hình Firebase Authentication.'
+          message: 'Không thể đăng nhập. Hãy kiểm tra lại kết nối mạng.'
         };
       }
     }
@@ -1447,6 +1486,14 @@ export default function App() {
     setSelectedPostId(post.id);
     setView('reader');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = window.location.href;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).catch(() => {});
+    }
+    showToast('Đã sao chép đường link trang để chia sẻ!');
   };
 
   const handleAddTag = (raw) => {
@@ -2365,6 +2412,15 @@ export default function App() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    onClick={handleCopyShareLink}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Chia sẻ</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => {
                       downloadPostAsMarkdown(selectedPost);
                       showToast('Đã xuất file Markdown (.md)');
@@ -2602,6 +2658,106 @@ export default function App() {
                       #{tag}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* Điều hướng Bài mới hơn / Bài trước đó */}
+              {(adjacentPosts.newer || adjacentPosts.older) && (
+                <div className="mt-8 grid sm:grid-cols-2 gap-3">
+                  {adjacentPosts.newer ? (
+                    <button
+                      type="button"
+                      onClick={() => openReader(adjacentPosts.newer)}
+                      className="group text-left p-4 rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/40 hover:border-amber-400/70 dark:hover:border-amber-500/50 transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs text-stone-400 dark:text-zinc-500 mb-1">
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>Bài mới hơn</span>
+                      </div>
+                      <div className="text-sm font-semibold text-stone-800 dark:text-zinc-200 group-hover:text-amber-700 dark:group-hover:text-amber-400 line-clamp-1 transition-colors">
+                        {adjacentPosts.newer.title}
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="hidden sm:block" />
+                  )}
+
+                  {adjacentPosts.older && (
+                    <button
+                      type="button"
+                      onClick={() => openReader(adjacentPosts.older)}
+                      className="group text-left sm:text-right p-4 rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/40 hover:border-amber-400/70 dark:hover:border-amber-500/50 transition-all"
+                    >
+                      <div className="flex items-center sm:justify-end gap-1.5 text-xs text-stone-400 dark:text-zinc-500 mb-1">
+                        <span>Bài trước đó</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-sm font-semibold text-stone-800 dark:text-zinc-200 group-hover:text-amber-700 dark:group-hover:text-amber-400 line-clamp-1 transition-colors">
+                        {adjacentPosts.older.title}
+                      </div>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Hộp liên hệ tác giả cuối bài viết */}
+              {(buildZaloHref(profile.zalo) ||
+                profile.facebook ||
+                profile.github ||
+                profile.email) && (
+                <div className="mt-8 p-5 rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-bold text-stone-900 dark:text-zinc-100">
+                      Trao đổi thêm cùng {profile.authorName}
+                    </div>
+                    <p className="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">
+                      Có thắc mắc về bài viết hoặc muốn hợp tác dự án? Nhắn trực tiếp cho mình nhé.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {buildZaloHref(profile.zalo) && (
+                      <a
+                        href={buildZaloHref(profile.zalo)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#0068FF] hover:bg-[#0057D9] text-white shadow-sm transition-colors"
+                      >
+                        <ZaloIcon className="w-4 h-4" />
+                        <span>Nhắn Zalo</span>
+                      </a>
+                    )}
+                    {profile.facebook && (
+                      <a
+                        href={profile.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#1877F2] hover:bg-[#1464CC] text-white shadow-sm transition-colors"
+                      >
+                        <FacebookIcon className="w-4 h-4" />
+                        <span>Facebook</span>
+                      </a>
+                    )}
+                    {profile.github && (
+                      <a
+                        href={profile.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        <GithubIcon className="w-4 h-4" />
+                        <span>GitHub</span>
+                      </a>
+                    )}
+                    {profile.email && (
+                      <a
+                        href={`mailto:${profile.email}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Email</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </article>
@@ -3084,6 +3240,28 @@ export default function App() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-100 dark:border-zinc-800">
+                      {buildZaloHref(profile.zalo) && (
+                        <a
+                          href={buildZaloHref(profile.zalo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#0068FF] hover:bg-[#0057D9] text-white shadow-sm transition-colors"
+                        >
+                          <ZaloIcon className="w-4 h-4" />
+                          <span>Liên hệ Zalo</span>
+                        </a>
+                      )}
+                      {profile.facebook && (
+                        <a
+                          href={profile.facebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1877F2] hover:bg-[#1464CC] text-white shadow-sm transition-colors"
+                        >
+                          <FacebookIcon className="w-4 h-4" />
+                          <span>Facebook</span>
+                        </a>
+                      )}
                       {profile.github && (
                         <a
                           href={profile.github}
@@ -3237,7 +3415,7 @@ export default function App() {
                     {/* Nhóm 2: Hồ sơ tác giả & Liên kết */}
                     <div className="space-y-4 pt-4 border-t border-stone-200 dark:border-zinc-800">
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
-                        2. Hồ sơ tác giả & Liên kết
+                        2. Hồ sơ tác giả & Liên kết liên hệ
                       </h3>
 
                       <div>
@@ -3256,7 +3434,7 @@ export default function App() {
 
                       <div>
                         <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
-                          Tiểu sử chi tiết (trang Giới thiệu)
+                          Giới thiệu bản thân (để trống để ẩn)
                         </label>
                         <textarea
                           rows={4}
@@ -3266,6 +3444,37 @@ export default function App() {
                           }
                           className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                         />
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
+                            Số điện thoại hoặc Link Zalo (để trống để ẩn)
+                          </label>
+                          <input
+                            type="text"
+                            value={profileDraft.zalo || ''}
+                            onChange={(e) =>
+                              setProfileDraft({ ...profileDraft, zalo: e.target.value })
+                            }
+                            placeholder="VD: 0912345678 hoặc https://zalo.me/..."
+                            className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
+                            Link Facebook (để trống để ẩn)
+                          </label>
+                          <input
+                            type="url"
+                            value={profileDraft.facebook || ''}
+                            onChange={(e) =>
+                              setProfileDraft({ ...profileDraft, facebook: e.target.value })
+                            }
+                            placeholder="https://facebook.com/ten-cua-ban"
+                            className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid sm:grid-cols-3 gap-3">
@@ -3343,9 +3552,30 @@ export default function App() {
                 {profile.footerText ? ` — ${profile.footerText}` : ''}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <span>Dữ liệu được đồng bộ tự động</span>
-              <span>•</span>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {buildZaloHref(profile.zalo) && (
+                <a
+                  href={buildZaloHref(profile.zalo)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-[#0068FF] dark:text-sky-400 hover:underline"
+                >
+                  <ZaloIcon className="w-3.5 h-3.5" />
+                  <span>Zalo</span>
+                </a>
+              )}
+              {profile.facebook && (
+                <a
+                  href={profile.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-[#1877F2] dark:text-blue-400 hover:underline"
+                >
+                  <FacebookIcon className="w-3.5 h-3.5" />
+                  <span>Facebook</span>
+                </a>
+              )}
+              {(buildZaloHref(profile.zalo) || profile.facebook) && <span>•</span>}
               {isAdmin ? (
                 <button
                   type="button"
@@ -3368,6 +3598,19 @@ export default function App() {
             </div>
           </div>
         </footer>
+
+        {/* NÚT CUỘN NHANH LÊN ĐẦU TRANG */}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            aria-label="Lên đầu trang"
+            title="Lên đầu trang"
+            className="fixed bottom-5 left-5 z-40 p-2.5 rounded-full border border-stone-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 text-stone-700 dark:text-zinc-300 shadow-md hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-all"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+        )}
 
         {/* HỘP THOẠI ĐĂNG NHẬP / THIẾT LẬP ADMIN */}
         <AdminAuthModal
