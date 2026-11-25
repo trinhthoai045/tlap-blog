@@ -13,9 +13,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Play,
-  Pause,
-  RotateCcw,
   ExternalLink,
   Tag,
   Flame,
@@ -111,15 +108,20 @@ if (firebaseConfig && firebaseConfig.apiKey) {
 // ============================================================================
 // HẰNG SỐ & HÀM TIỆN ÍCH
 // ============================================================================
+const LEGACY_30M_BADGE = 'Thử thách 30 phút viết mỗi ngày';
+const LEGACY_30M_FOOTER = 'Xây dựng thói quen 30 phút viết mỗi ngày.';
+const LEGACY_30M_BIO =
+  'Xin chào! Mình là Thoại. Đây là không gian lưu trữ những dự án cá nhân mình đang xây dựng và các kiến thức chắt lọc được qua từng ngày.\n\nMỗi tối mình dành 30 phút để viết lại một điều mới — vừa để hệ thống hóa tư duy, vừa để lưu lại dấu ấn trên hành trình học hỏi.';
+
 const DEFAULT_PROFILE = {
   blogName: 'TLAP',
   logoSubtitle: '2026',
-  heroBadge: 'Thử thách 30 phút viết mỗi ngày',
+  heroBadge: 'Ghi chép & Dự án cá nhân',
   tagline: 'Ghi chép hành trình xây dựng dự án, tư duy lập trình và những bài học tích lũy mỗi ngày.',
-  footerText: 'Xây dựng thói quen 30 phút viết mỗi ngày.',
+  footerText: 'Lưu giữ hành trình học tập và dự án.',
   showStats: true,
   authorName: 'Thoại',
-  bio: 'Xin chào! Mình là Thoại. Đây là không gian lưu trữ những dự án cá nhân mình đang xây dựng và các kiến thức chắt lọc được qua từng ngày.\n\nMỗi tối mình dành 30 phút để viết lại một điều mới — vừa để hệ thống hóa tư duy, vừa để lưu lại dấu ấn trên hành trình học hỏi.',
+  bio: 'Xin chào! Mình là Thoại. Đây là không gian lưu trữ những dự án cá nhân mình đang xây dựng và các kiến thức chắt lọc được qua từng ngày.\n\nMình thường xuyên viết lại những điều mới học được — vừa để hệ thống hóa tư duy, vừa để lưu lại dấu ấn trên hành trình học hỏi.',
   phone: '',
   zalo: '',
   facebook: '',
@@ -315,7 +317,7 @@ function createSeedPosts() {
   const day = 24 * 60 * 60 * 1000;
   return [
     {
-      title: 'Tại sao mình bắt đầu thói quen 30 phút viết mỗi ngày?',
+      title: 'Tại sao mình bắt đầu thói quen viết chia sẻ mỗi ngày?',
       category: 'knowledge',
       summary:
         'Viết không chỉ để chia sẻ với người khác, mà là cách tốt nhất để kiểm tra xem mình có thực sự hiểu điều mình vừa học hay chưa.',
@@ -328,12 +330,12 @@ function createSeedPosts() {
 
 Trước đây mình thường lưu rất nhiều bài viết hay, xem nhiều video hướng dẫn, nhưng chỉ sau vài tuần là quên gần hết. Lý do rất đơn giản: **mình chỉ tiêu thụ thông tin chứ chưa tự diễn đạt lại bằng ngôn ngữ của chính mình**.
 
-### Quy tắc 30 phút mỗi tối
+### Duy trì nhịp viết đều đặn
 
-Thay vì đặt mục tiêu viết một bài thật dài hay thật hoàn hảo, mình chỉ cam kết đúng **30 phút mỗi tối**:
+Thay vì đặt mục tiêu viết một bài thật dài hay thật hoàn hảo, mình giữ thói quen ghi chép ngắn gọn mỗi ngày:
 
 1. Chọn một vấn đề vừa gặp trong ngày hoặc một tính năng vừa làm xong.
-2. Mở trình soạn thảo, bật đồng hồ đếm ngược 30:00.
+2. Mở trình soạn thảo và ghi lại các ý chính quan trọng nhất.
 3. Viết liền mạch theo cấu trúc: *Vấn đề là gì → Cách giải quyết → Bài học rút ra*.
 
 > "Nếu bạn không thể giải thích một điều gì đó một cách đơn giản, nghĩa là bạn chưa hiểu nó đủ sâu."
@@ -344,7 +346,7 @@ Hy vọng khu vườn số **TLAP** này sẽ là nơi lưu giữ những bướ
       title: 'TLAP Blog — Hệ thống ghi chép & lưu trữ dự án cá nhân',
       category: 'project',
       summary:
-        'Xây dựng trang blog tối giản tích hợp trình soạn thảo Markdown song song, đồng hồ Pomodoro 30 phút và phân quyền Admin bảo mật.',
+        'Xây dựng trang blog tối giản tích hợp trình soạn thảo Markdown song song, tự động tạo mục lục và phân quyền Admin bảo mật.',
       tags: ['React', 'TailwindCSS', 'Firebase'],
       projectStatus: 'Hoàn thành',
       demoUrl: '',
@@ -358,7 +360,7 @@ Hy vọng khu vườn số **TLAP** này sẽ là nơi lưu giữ những bướ
 Mình muốn có một trang blog của riêng mình với 3 tiêu chí cốt lõi:
 
 - **Tập trung vào nội dung:** Giao diện nền giấy ấm dịu mắt, hỗ trợ chế độ Sáng/Tối và tự động tạo mục lục cho bài dài.
-- **Viết nhanh không rào cản:** Tích hợp sẵn đồng hồ đếm ngược 30 phút, dán ảnh trực tiếp bằng \`Ctrl + V\` và tự động nén nhẹ.
+- **Viết nhanh không rào cản:** Trình soạn thảo Markdown trực quan, dán ảnh trực tiếp bằng \`Ctrl + V\` và tự động nén nhẹ.
 - **Bảo mật tuyệt đối:** Độc giả xem trang mượt mà không cần đăng nhập; chỉ duy nhất tài khoản Admin mới có quyền viết, chỉnh sửa và quản lý bản nháp.
 
 ## Kiến trúc công nghệ
@@ -413,9 +415,44 @@ Hãy ưu tiên những cái tên rõ nghĩa như \`canEdit\`, \`isUploadingImage
 // ============================================================================
 function ZaloIcon({ className = 'w-4 h-4' }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M12.49 2C6.89 2 2.4 6.13 2.4 11.22c0 2.86 1.43 5.42 3.68 7.11-.14.95-.59 2.38-1.41 3.4-.2.25-.02.63.3.59 1.66-.21 3.55-.84 4.71-1.45.89.22 1.83.34 2.81.34 5.6 0 10.11-4.13 10.11-9.22S18.09 2 12.49 2zm-4.1 11.88H5.48c-.33 0-.56-.35-.41-.64l2.22-4.12H5.56a.45.45 0 0 1 0-.9h2.76c.33 0 .56.34.41.64l-2.21 4.12h1.87a.45.45 0 0 1 0 .9zm3.54-.45a.45.45 0 0 1-.9 0v-.24a1.9 1.9 0 0 1-1.26.47c-1.1 0-1.98-.94-1.98-2.1s.88-2.1 1.98-2.1c.48 0 .92.18 1.26.47v-.02a.45.45 0 0 1 .9 0v3.52zm1.89 0a.45.45 0 0 1-.9 0V7.96a.45.45 0 0 1 .9 0v5.47zm3.43.23c-1.15 0-2.08-.94-2.08-2.1s.93-2.1 2.08-2.1 2.08.94 2.08 2.1-.93 2.1-2.08 2.1zm-7.36-3.3c-.6 0-1.08.53-1.08 1.2s.48 1.2 1.08 1.2 1.08-.53 1.08-1.2-.48-1.2-1.08-1.2zm7.36 0c-.65 0-1.18.54-1.18 1.2s.53 1.2 1.18 1.2 1.18-.54 1.18-1.2-.53-1.2-1.18-1.2z" />
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 2.5C6.48 2.5 2 6.53 2 11.5c0 2.74 1.37 5.2 3.53 6.84-.18 1.07-.65 2.27-1.36 3.13-.22.27-.01.67.33.62 1.66-.24 3.4-.83 4.62-1.46.92.24 1.89.37 2.88.37 5.52 0 10-4.03 10-9.5S17.52 2.5 12 2.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8.4 8.3h7.2l-7.2 6.8h7.2"
+        stroke="#FFFFFF"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
+  );
+}
+
+function ZaloCircleBadge() {
+  return (
+    <span className="w-12 h-12 rounded-full bg-[#0068FF] text-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+      <svg viewBox="0 0 48 48" fill="none" className="w-9 h-9" aria-hidden="true">
+        <path
+          d="M24 6C13.5 6 5 13.4 5 22.6c0 5.1 2.6 9.6 6.8 12.6-.3 2.1-1.2 4.3-2.5 5.9-.4.5 0 1.2.6 1.1 3.1-.4 6.4-1.5 8.6-2.7 1.7.4 3.6.7 5.5.7 10.5 0 19-7.4 19-16.6S34.5 6 24 6Z"
+          fill="#FFFFFF"
+        />
+        <text
+          x="24"
+          y="27"
+          textAnchor="middle"
+          fill="#0068FF"
+          fontSize="13.5"
+          fontWeight="800"
+          fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          letterSpacing="-0.3"
+        >
+          Zalo
+        </text>
+      </svg>
+    </span>
   );
 }
 
@@ -462,7 +499,7 @@ function TlapLogoMark({ className = 'w-8 h-8' }) {
 }
 
 // ============================================================================
-// CỤM NÚT LIÊN HỆ NỔI GÓC PHẢI DƯỚI (ZALO, FACEBOOK, ĐIỆN THOẠI)
+// CỤM NÚT LIÊN HỆ NỔI GÓC PHẢI DƯỚI (ZALO, FACEBOOK, PHONE)
 // ============================================================================
 function FloatingContactWidget({ profile }) {
   const zaloHref = buildZaloHref(profile?.zalo);
@@ -490,13 +527,11 @@ function FloatingContactWidget({ profile }) {
               rel="noopener noreferrer"
               className="group flex items-center gap-2.5"
             >
-              <span className="relative px-3.5 py-2 rounded-lg bg-[#0078D4] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#0064B3] transition-colors whitespace-nowrap">
-                Chat Zalo
-                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#0078D4] group-hover:border-l-[#0064B3] transition-colors" />
+              <span className="relative px-3.5 py-2 rounded-lg bg-[#0068FF] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#0056D6] transition-colors whitespace-nowrap">
+                Zalo
+                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#0068FF] group-hover:border-l-[#0056D6] transition-colors" />
               </span>
-              <span className="w-12 h-12 rounded-full bg-white text-[#0068FF] border-2 border-[#0068FF]/20 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                <ZaloIcon className="w-7 h-7" />
-              </span>
+              <ZaloCircleBadge />
             </a>
           )}
 
@@ -522,9 +557,9 @@ function FloatingContactWidget({ profile }) {
               href={phoneHref}
               className="group flex items-center gap-2.5"
             >
-              <span className="relative px-3.5 py-2 rounded-lg bg-[#0078D4] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#0064B3] transition-colors whitespace-nowrap">
-                Gọi {profile.phone.trim()}
-                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#0078D4] group-hover:border-l-[#0064B3] transition-colors" />
+              <span className="relative px-3.5 py-2 rounded-lg bg-[#68B817] text-white text-xs sm:text-sm font-bold shadow-md group-hover:bg-[#5AA112] transition-colors whitespace-nowrap">
+                Phone
+                <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[7px] border-l-[#68B817] group-hover:border-l-[#5AA112] transition-colors" />
               </span>
               <span className="w-12 h-12 rounded-full bg-[#68B817] text-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Phone className="w-5 h-5 fill-current" />
@@ -534,7 +569,7 @@ function FloatingContactWidget({ profile }) {
         </div>
       )}
 
-      {/* Nút đóng / mở màu cam giống mẫu */}
+      {/* Nút đóng / mở màu cam */}
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
@@ -551,79 +586,6 @@ function FloatingContactWidget({ profile }) {
           <MessageCircle className="w-6 h-6" />
         )}
       </button>
-    </div>
-  );
-}
-
-// ============================================================================
-// ĐỒNG HỒ ĐẾM NGƯỢC 30 PHÚT VIẾT BÀI
-// ============================================================================
-function WritingTimer({ onComplete }) {
-  const TOTAL_SECONDS = 30 * 60;
-  const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
-  const [isRunning, setIsRunning] = useState(false);
-
-  useEffect(() => {
-    if (!isRunning) return;
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsRunning(false);
-          if (onComplete) onComplete();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isRunning, onComplete]);
-
-  const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-  const secs = String(secondsLeft % 60).padStart(2, '0');
-  const progress = ((TOTAL_SECONDS - secondsLeft) / TOTAL_SECONDS) * 100;
-
-  return (
-    <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <Clock
-          className={`w-4 h-4 ${
-            isRunning ? 'text-amber-600 dark:text-amber-400 animate-pulse' : 'text-stone-400'
-          }`}
-        />
-        <span className="font-mono text-sm font-semibold tabular-nums text-stone-900 dark:text-zinc-100">
-          {mins}:{secs}
-        </span>
-      </div>
-
-      <div className="hidden sm:block w-16 h-1.5 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
-        <div
-          className="h-full bg-amber-500 transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => setIsRunning((r) => !r)}
-          title={isRunning ? 'Tạm dừng' : 'Bắt đầu đếm ngược 30 phút'}
-          className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
-        >
-          {isRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setIsRunning(false);
-            setSecondsLeft(TOTAL_SECONDS);
-          }}
-          title="Đặt lại 30:00"
-          className="p-1.5 rounded-lg text-stone-500 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      </div>
     </div>
   );
 }
@@ -1411,7 +1373,23 @@ export default function App() {
       profileRef,
       (snap) => {
         if (snap.exists()) {
-          const data = { ...DEFAULT_PROFILE, ...snap.data() };
+          const raw = snap.data();
+          const data = {
+            ...DEFAULT_PROFILE,
+            ...raw,
+            heroBadge:
+              raw.heroBadge === LEGACY_30M_BADGE
+                ? DEFAULT_PROFILE.heroBadge
+                : raw.heroBadge ?? DEFAULT_PROFILE.heroBadge,
+            footerText:
+              raw.footerText === LEGACY_30M_FOOTER
+                ? DEFAULT_PROFILE.footerText
+                : raw.footerText ?? DEFAULT_PROFILE.footerText,
+            bio:
+              raw.bio === LEGACY_30M_BIO
+                ? DEFAULT_PROFILE.bio
+                : raw.bio ?? DEFAULT_PROFILE.bio
+          };
           latestProfile = data;
           setProfile(data);
         } else {
@@ -1620,7 +1598,7 @@ export default function App() {
         await signInWithEmailAndPassword(auth, email, password);
         setIsAdmin(true);
         setPreviewAsGuest(false);
-        showToast('Đăng nhập Admin thành công! Chúc bạn có 30 phút viết hiệu quả.');
+        showToast('Đăng nhập Admin thành công!');
         return { ok: true };
       } catch (err) {
         console.error('Lỗi đăng nhập Firebase Auth:', err);
@@ -2521,7 +2499,7 @@ export default function App() {
                     <p className="text-sm text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
                       {searchQuery || selectedTag
                         ? 'Hãy thử xóa bộ lọc hoặc tìm bằng từ khóa khác.'
-                        : 'Bắt đầu phiên viết 30 phút để lưu lại ý tưởng hoặc dự án mới nhất của bạn.'}
+                        : 'Bắt đầu viết bài mới để lưu lại ý tưởng hoặc dự án mới nhất của bạn.'}
                     </p>
                     <div className="flex items-center justify-center gap-2 pt-2">
                       {(searchQuery || selectedTag) && (
@@ -3300,7 +3278,7 @@ export default function App() {
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#68B817] hover:bg-[#5AA112] text-white shadow-sm transition-colors"
                       >
                         <Phone className="w-3.5 h-3.5" />
-                        <span>{profile.phone}</span>
+                        <span>Phone</span>
                       </a>
                     )}
                     {buildZaloHref(profile.zalo) && (
@@ -3311,7 +3289,7 @@ export default function App() {
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#0068FF] hover:bg-[#0057D9] text-white shadow-sm transition-colors"
                       >
                         <ZaloIcon className="w-4 h-4" />
-                        <span>Nhắn Zalo</span>
+                        <span>Zalo</span>
                       </a>
                     )}
                     {profile.facebook && (
@@ -3354,7 +3332,7 @@ export default function App() {
           {/* -------------------- VIEW 3: TRÌNH SOẠN THẢO (CHỈ ADMIN) -------------------- */}
           {view === 'editor' && canEdit && (
             <div className="space-y-6">
-              {/* Thanh công cụ trên cùng kèm Đồng hồ 30 phút */}
+              {/* Thanh công cụ trên cùng */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-stone-200 dark:border-zinc-800">
                 <button
                   type="button"
@@ -3364,12 +3342,6 @@ export default function App() {
                   <ArrowLeft className="w-4 h-4" />
                   <span>Hủy & Quay lại</span>
                 </button>
-
-                <WritingTimer
-                  onComplete={() =>
-                    showToast('Tuyệt vời! Bạn đã hoàn thành mục tiêu viết 30 phút hôm nay!')
-                  }
-                />
 
                 <div className="flex items-center gap-2">
                   {autoSavedAt && (
@@ -3840,7 +3812,7 @@ export default function App() {
                           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#68B817] hover:bg-[#5AA112] text-white shadow-sm transition-colors"
                         >
                           <Phone className="w-4 h-4" />
-                          <span>{profile.phone}</span>
+                          <span>Phone</span>
                         </a>
                       )}
                       {buildZaloHref(profile.zalo) && (
@@ -3851,7 +3823,7 @@ export default function App() {
                           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#0068FF] hover:bg-[#0057D9] text-white shadow-sm transition-colors"
                         >
                           <ZaloIcon className="w-4 h-4" />
-                          <span>Liên hệ Zalo</span>
+                          <span>Zalo</span>
                         </a>
                       )}
                       {profile.facebook && (
@@ -3960,7 +3932,37 @@ export default function App() {
                           onChange={(e) =>
                             setProfileDraft({ ...profileDraft, heroBadge: e.target.value })
                           }
-                          placeholder="VD: Thử thách 30 phút viết mỗi ngày"
+                          placeholder="VD: Ghi chép & Dự án cá nhân"
+                          className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
+                          Khẩu hiệu / Mô tả ngắn trên trang chủ (để trống để ẩn)
+                        </label>
+                        <input
+                          type="text"
+                          value={profileDraft.tagline || ''}
+                          onChange={(e) =>
+                            setProfileDraft({ ...profileDraft, tagline: e.target.value })
+                          }
+                          placeholder="Mô tả ngắn về blog của bạn..."
+                          className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-stone-500 dark:text-zinc-400 mb-1">
+                          Dòng chữ ở chân trang (để trống để chỉ hiện © {new Date().getFullYear()} {profileDraft.blogName || profile.blogName})
+                        </label>
+                        <input
+                          type="text"
+                          value={profileDraft.footerText || ''}
+                          onChange={(e) =>
+                            setProfileDraft({ ...profileDraft, footerText: e.target.value })
+                          }
+                          placeholder="VD: Lưu giữ hành trình học tập và dự án."
                           className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                         />
                       </div>
