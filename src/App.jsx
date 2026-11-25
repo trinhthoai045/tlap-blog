@@ -37,7 +37,6 @@ import {
   ShieldCheck,
   EyeOff,
   Link2,
-  Info,
   KeyRound,
   Settings,
   Image as ImageIcon,
@@ -799,7 +798,6 @@ function AdminAuthModal({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [showDeployGuide, setShowDeployGuide] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -860,14 +858,12 @@ function AdminAuthModal({
             </div>
             <div>
               <h3 className="font-bold text-lg text-stone-900 dark:text-zinc-50">
-                {isConfigured ? 'Đăng nhập Quản trị (Admin)' : 'Thiết lập tài khoản Chủ blog'}
+                {isConfigured ? 'Đăng nhập Quản trị' : 'Thiết lập tài khoản Quản trị'}
               </h3>
               <p className="text-xs text-stone-500 dark:text-zinc-400">
-                {isProductionAuth
-                  ? 'Đăng nhập bằng tài khoản Firebase Email/Password của chủ blog.'
-                  : isConfigured
-                  ? 'Chỉ chủ blog mới có quyền viết, sửa, xóa và xem bản nháp.'
-                  : 'Lần đầu dùng thử: tạo email & mật khẩu Admin để trải nghiệm.'}
+                {isConfigured
+                  ? 'Dành riêng cho chủ blog.'
+                  : 'Tạo email và mật khẩu quản trị cho blog.'}
               </p>
             </div>
           </div>
@@ -890,7 +886,21 @@ function AdminAuthModal({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ban@example.com"
+              placeholder="Nhập email quản trị"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-stone-600 dark:text-zinc-300 mb-1">
+              Mật khẩu
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Nhập mật khẩu"
               className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
             />
           </div>
@@ -944,45 +954,10 @@ function AdminAuthModal({
             {submitting
               ? 'Đang xác thực...'
               : isConfigured
-              ? 'Đăng nhập chế độ Admin'
-              : 'Lưu & Vào chế độ Admin'}
+              ? 'Đăng nhập'
+              : 'Lưu & Đăng nhập'}
           </button>
         </form>
-
-        {/* Bảng hướng dẫn ngắn cấu hình Email Admin khi đưa lên web thật */}
-        <div className="pt-2 border-t border-stone-100 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={() => setShowDeployGuide((s) => !s)}
-            className="w-full flex items-center justify-between text-xs font-medium text-stone-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5" />
-              <span>Thông tin bảo mật khi chạy trên web thật</span>
-            </span>
-            <span>{showDeployGuide ? 'Thu gọn' : 'Xem'}</span>
-          </button>
-
-          {showDeployGuide && (
-            <div className="mt-3 p-3.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-xs text-stone-600 dark:text-zinc-400 space-y-2 leading-relaxed">
-              <p className="font-semibold text-stone-800 dark:text-zinc-200">
-                Code đã tích hợp sẵn Firebase Email/Password Auth:
-              </p>
-              <ol className="list-decimal pl-4 space-y-1">
-                <li>
-                  Điền <strong>PRODUCTION_FIREBASE_CONFIG</strong> và{' '}
-                  <strong>PRODUCTION_ADMIN_EMAIL</strong> ở đầu file <code>src/App.jsx</code>.
-                </li>
-                <li>
-                  Tạo tài khoản Admin trong <strong>Firebase Console → Authentication → Users</strong>.
-                </li>
-                <li>
-                  Dán bộ <strong>Firestore Security Rules</strong> trong file hướng dẫn để chỉ duy nhất email của bạn mới có quyền ghi bài và xem bản nháp.
-                </li>
-              </ol>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
