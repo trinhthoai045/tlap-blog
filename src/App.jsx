@@ -794,13 +794,7 @@ function AdminAuthModal({
   onLogin
 }) {
   const isConfigured = isProductionAuth || Boolean(adminConfig?.isConfigured);
-  const [email, setEmail] = useState(
-    isProductionAuth
-      ? PRODUCTION_ADMIN_EMAIL !== 'email-cua-ban@gmail.com'
-        ? PRODUCTION_ADMIN_EMAIL
-        : ''
-      : adminConfig?.adminEmail || ''
-  );
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -809,18 +803,12 @@ function AdminAuthModal({
 
   useEffect(() => {
     if (isOpen) {
-      setEmail(
-        isProductionAuth
-          ? PRODUCTION_ADMIN_EMAIL !== 'email-cua-ban@gmail.com'
-            ? PRODUCTION_ADMIN_EMAIL
-            : ''
-          : adminConfig?.adminEmail || ''
-      );
+      setEmail('');
       setPassword('');
       setConfirmPassword('');
       setError('');
     }
-  }, [isOpen, adminConfig, isProductionAuth]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
