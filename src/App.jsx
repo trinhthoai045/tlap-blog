@@ -46,7 +46,8 @@ import {
   Upload,
   Pin,
   List,
-  ZoomIn
+  ZoomIn,
+  Heart
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import {
@@ -67,7 +68,8 @@ import {
   deleteDoc,
   onSnapshot,
   query,
-  where
+  where,
+  increment
 } from 'firebase/firestore';
 
 // ============================================================================
@@ -1032,6 +1034,19 @@ export default function App() {
   const [editorMode, setEditorMode] = useState('split'); // 'write' | 'preview' | 'split'
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [autoSavedAt, setAutoSavedAt] = useState(null);
+
+  // Tương tác độc giả (Lượt xem & Thả tim)
+  const [likedPostIds, setLikedPostIds] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('tlap_liked_posts') || '[]');
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
+  const viewedPostIdsRef = useRef(new Set());
+  const pendingHashPostIdRef = useRef(null);
 
   // Lightbox phóng to ảnh, Thanh tiến độ đọc & Nút lên đầu trang
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -1059,6 +1074,94 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Đồng bộ URL Hash (#post=ID) để chia sẻ link trực tiếp từng bài viết
+  useEffect(() => {
+    const applyHashFromUrl = () => {
+      const hash = window.location.hash || '';
+      const match = hash.match(/^#post=([^&]+)/);
+      if (match && match[1]) {
+        const targetId = decodeURIComponent(match[1]);
+        pendingHashPostIdRef.current = targetId;
+        setSelectedPostId(targetId);
+        setView('reader');
+      } else if (hash === '#about') {
+        setActiveTab('about');
+        setView('about');
+      }
+    };
+
+    applyHashFromUrl();
+    window.addEventListener('hashchange', applyHashFromUrl);
+    return () => window.removeEventListener('hashchange', applyHashFromUrl);
+  }, []);
+
+  useEffect(() => {
+    if (loadingData || !pendingHashPostIdRef.current) return;
+    const targetId = pendingHashPostIdRef.current;
+    pendingHashPostIdRef.current = null;
+    const exists = posts.some((p) => p.id === targetId);
+    if (!exists) {
+      setSelectedPostId(null);
+      setView('home');
+      try {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } catch {
+        // Bỏ qua nếu môi trường sandbox chặn history API
+      }
+    }
+  }, [loadingData, posts]);
+
+  // Tự động lưu bản nháp cục bộ (Auto-save LocalStorage) chống mất bài khi lỡ F5
+  const editorBackupKey = useMemo(
+    () => `tlap_editor_backup_${editingPostId || 'new'}`,
+    [editingPostId]
+  );
+
+  useEffect(() => {
+    if (view !== 'editor' || !canEdit) return;
+    const timer = setTimeout(() => {
+      const hasContent =
+        formTitle.trim() || formContent.trim() || formSummary.trim() || formCoverImage;
+      if (!hasContent) return;
+      try {
+        localStorage.setItem(
+          editorBackupKey,
+          JSON.stringify({
+            title: formTitle,
+            category: formCategory,
+            summary: formSummary,
+            tags: formTags,
+            content: formContent,
+            coverImage: formCoverImage,
+            isPinned: formIsPinned,
+            projectStatus: formProjectStatus,
+            demoUrl: formDemoUrl,
+            githubUrl: formGithubUrl,
+            savedAt: Date.now()
+          })
+        );
+        setAutoSavedAt(Date.now());
+      } catch {
+        // Bỏ qua nếu bộ nhớ trình duyệt đầy (ví dụ ảnh quá lớn)
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [
+    view,
+    canEdit,
+    editorBackupKey,
+    formTitle,
+    formCategory,
+    formSummary,
+    formTags,
+    formContent,
+    formCoverImage,
+    formIsPinned,
+    formProjectStatus,
+    formDemoUrl,
+    formGithubUrl
+  ]);
 
   // Theo dõi cuộn trang: thanh tiến độ đọc & nút lên đầu trang
   useEffect(() => {
@@ -1444,56 +1547,154 @@ export default function App() {
   // --------------------------------------------------------------------------
   // THAO TÁC BÀI VIẾT & HỒ SƠ
   // --------------------------------------------------------------------------
+  const updateUrlHash = (nextHash) => {
+    try {
+      const base = window.location.pathname + window.location.search;
+      window.history.replaceState(null, '', nextHash ? `${base}${nextHash}` : base);
+    } catch {
+      // Bỏ qua nếu môi trường chặn thay đổi URL
+    }
+  };
+
+  const restoreEditorBackupIfAvailable = (backupKey, fallbackData) => {
+    try {
+      const raw = localStorage.getItem(backupKey);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      if (!parsed || (!parsed.title && !parsed.content)) return false;
+
+      const isDifferent =
+        parsed.title !== (fallbackData.title || '') ||
+        parsed.content !== (fallbackData.content || '');
+      if (!isDifferent) return false;
+
+      setFormTitle(parsed.title || '');
+      setFormCategory(parsed.category || fallbackData.category || 'knowledge');
+      setFormSummary(parsed.summary || '');
+      setFormTags(Array.isArray(parsed.tags) ? parsed.tags : []);
+      setFormContent(parsed.content || '');
+      setFormCoverImage(parsed.coverImage || '');
+      setFormIsPinned(Boolean(parsed.isPinned));
+      setFormProjectStatus(parsed.projectStatus || 'Đang làm');
+      setFormDemoUrl(parsed.demoUrl || '');
+      setFormGithubUrl(parsed.githubUrl || '');
+      setAutoSavedAt(parsed.savedAt || Date.now());
+      showToast('Đã khôi phục bản nháp chưa lưu từ phiên làm việc trước!');
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const openNewEditor = (defaultCategory = 'knowledge') => {
     if (!canEdit) return;
     setEditingPostId(null);
-    setFormTitle('');
-    setFormCategory(defaultCategory);
-    setFormSummary('');
-    setFormTags([]);
+    setAutoSavedAt(null);
     setTagInput('');
-    setFormContent('');
-    setFormCoverImage('');
-    setFormIsPinned(false);
-    setFormProjectStatus('Đang làm');
-    setFormDemoUrl('');
-    setFormGithubUrl('');
+    const restored = restoreEditorBackupIfAvailable('tlap_editor_backup_new', {
+      category: defaultCategory
+    });
+    if (!restored) {
+      setFormTitle('');
+      setFormCategory(defaultCategory);
+      setFormSummary('');
+      setFormTags([]);
+      setFormContent('');
+      setFormCoverImage('');
+      setFormIsPinned(false);
+      setFormProjectStatus('Đang làm');
+      setFormDemoUrl('');
+      setFormGithubUrl('');
+    }
     setEditorMode('split');
     setView('editor');
+    updateUrlHash('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const openEditEditor = (post) => {
     if (!canEdit) return;
     setEditingPostId(post.id);
-    setFormTitle(post.title || '');
-    setFormCategory(post.category || 'knowledge');
-    setFormSummary(post.summary || '');
-    setFormTags(post.tags || []);
+    setAutoSavedAt(null);
     setTagInput('');
-    setFormContent(post.content || '');
-    setFormCoverImage(post.coverImage || '');
-    setFormIsPinned(Boolean(post.isPinned));
-    setFormProjectStatus(post.projectStatus || 'Đang làm');
-    setFormDemoUrl(post.demoUrl || '');
-    setFormGithubUrl(post.githubUrl || '');
+    const restored = restoreEditorBackupIfAvailable(`tlap_editor_backup_${post.id}`, post);
+    if (!restored) {
+      setFormTitle(post.title || '');
+      setFormCategory(post.category || 'knowledge');
+      setFormSummary(post.summary || '');
+      setFormTags(post.tags || []);
+      setFormContent(post.content || '');
+      setFormCoverImage(post.coverImage || '');
+      setFormIsPinned(Boolean(post.isPinned));
+      setFormProjectStatus(post.projectStatus || 'Đang làm');
+      setFormDemoUrl(post.demoUrl || '');
+      setFormGithubUrl(post.githubUrl || '');
+    }
     setEditorMode('split');
     setView('editor');
+    updateUrlHash('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const openReader = (post) => {
     setSelectedPostId(post.id);
     setView('reader');
+    updateUrlHash(`#post=${encodeURIComponent(post.id)}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Tăng lượt xem 1 lần mỗi phiên cho bài đã xuất bản
+    if (post.status === 'published' && !viewedPostIdsRef.current.has(post.id)) {
+      viewedPostIdsRef.current.add(post.id);
+      if (db) {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', post.id);
+        updateDoc(docRef, { views: increment(1) }).catch(() => {});
+      } else {
+        setPosts((prev) =>
+          prev.map((p) => (p.id === post.id ? { ...p, views: (p.views || 0) + 1 } : p))
+        );
+      }
+    }
   };
 
-  const handleCopyShareLink = () => {
-    const shareUrl = window.location.href;
+  const handleToggleLike = async (post) => {
+    if (!post) return;
+    const alreadyLiked = likedPostIds.includes(post.id);
+    const nextLiked = alreadyLiked
+      ? likedPostIds.filter((id) => id !== post.id)
+      : [...likedPostIds, post.id];
+    setLikedPostIds(nextLiked);
+    try {
+      localStorage.setItem('tlap_liked_posts', JSON.stringify(nextLiked));
+    } catch {
+      // Bỏ qua nếu bị chặn localStorage
+    }
+
+    const delta = alreadyLiked ? -1 : 1;
+    if (!alreadyLiked) {
+      showToast('Cảm ơn bạn đã yêu thích bài viết!');
+    }
+
+    if (db) {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', post.id);
+      updateDoc(docRef, { likes: increment(delta) }).catch(() => {});
+    } else {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id ? { ...p, likes: Math.max(0, (p.likes || 0) + delta) } : p
+        )
+      );
+    }
+  };
+
+  const handleCopyShareLink = (postToShare = selectedPost) => {
+    const base = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const shareUrl = postToShare
+      ? `${base}#post=${encodeURIComponent(postToShare.id)}`
+      : window.location.href;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl).catch(() => {});
     }
-    showToast('Đã sao chép đường link trang để chia sẻ!');
+    showToast('Đã sao chép đường link riêng của bài viết!');
   };
 
   const handleAddTag = (raw) => {
@@ -1659,7 +1860,17 @@ export default function App() {
           ? 'Đã xuất bản bài viết thành công!'
           : 'Đã lưu vào Bản nháp.'
       );
+      try {
+        localStorage.removeItem(editorBackupKey);
+      } catch {
+        // Bỏ qua
+      }
+      setAutoSavedAt(null);
+      const savedId = editingPostId || selectedPostId;
       setView('reader');
+      if (savedId) {
+        updateUrlHash(`#post=${encodeURIComponent(savedId)}`);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Lỗi lưu bài viết:', err);
@@ -1776,8 +1987,10 @@ export default function App() {
     setSelectedTag('');
     if (tab === 'about') {
       setView('about');
+      updateUrlHash('#about');
     } else {
       setView('home');
+      updateUrlHash('');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -2106,47 +2319,22 @@ export default function App() {
                       </button>
                     )}
                   </div>
-
-                  {/* Bộ lọc danh mục nhanh */}
-                  <div className="flex items-center p-1 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 overflow-x-auto">
-                    {[
-                      { id: 'all', label: 'Tất cả' },
-                      { id: 'knowledge', label: 'Kiến thức' },
-                      { id: 'project', label: 'Dự án' },
-                      ...(canEdit
-                        ? [{ id: 'draft', label: `Bản nháp (${stats.draftCount})` }]
-                        : [])
-                    ].map((st) => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => setActiveTab(st.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                          activeTab === st.id
-                            ? 'bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
-                            : 'text-stone-600 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100'
-                        }`}
-                      >
-                        {st.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Thanh lọc theo Thẻ (Tags) */}
+                {/* Bộ lọc theo thẻ chủ đề */}
                 {allTags.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap pt-1">
-                    <span className="text-xs text-stone-400 dark:text-zinc-500 flex items-center gap-1 mr-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-stone-400 dark:text-zinc-500 mr-1">
                       <Tag className="w-3.5 h-3.5" />
-                      Chủ đề:
+                      <span>Chủ đề:</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setSelectedTag('')}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        selectedTag === ''
+                        !selectedTag
                           ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-zinc-950'
-                          : 'bg-stone-200/70 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300/70 dark:hover:bg-zinc-700'
+                          : 'bg-stone-100 dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:bg-stone-200 dark:hover:bg-zinc-800'
                       }`}
                     >
                       Tất cả
@@ -2159,52 +2347,252 @@ export default function App() {
                         className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                           selectedTag === tag
                             ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-zinc-950'
-                            : 'bg-stone-200/70 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300/70 dark:hover:bg-zinc-700'
+                            : 'bg-stone-100 dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:bg-stone-200 dark:hover:bg-zinc-800'
                         }`}
                       >
-                        #{tag} <span className="opacity-60">({count})</span>
+                        #{tag} ({count})
                       </button>
                     ))}
                   </div>
                 )}
               </section>
 
-              {/* Danh sách bài viết */}
-              <section className="space-y-4">
+              {/* Danh sách bài viết / Dự án */}
+              <section>
                 {loadingData ? (
                   <div className="grid gap-4">
                     {[1, 2, 3].map((n) => (
                       <div
                         key={n}
-                        className="h-40 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 animate-pulse"
-                      />
+                        className="rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 animate-pulse space-y-3"
+                      >
+                        <div className="h-4 w-32 rounded bg-stone-200 dark:bg-zinc-800" />
+                        <div className="h-6 w-3/4 rounded bg-stone-200 dark:bg-zinc-800" />
+                        <div className="h-4 w-full rounded bg-stone-100 dark:bg-zinc-800/70" />
+                      </div>
                     ))}
                   </div>
                 ) : filteredPosts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-stone-300 dark:border-zinc-700 p-12 text-center space-y-3 bg-white/60 dark:bg-zinc-900/40">
-                    <div className="w-12 h-12 rounded-full bg-stone-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-stone-400">
+                  <div className="rounded-2xl border border-dashed border-stone-300 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 p-10 text-center space-y-3">
+                    <div className="w-12 h-12 mx-auto rounded-2xl bg-stone-100 dark:bg-zinc-800 flex items-center justify-center text-stone-400">
                       <BookOpen className="w-6 h-6" />
                     </div>
-                    <h3 className="font-semibold text-stone-900 dark:text-zinc-100">
-                      Không tìm thấy bài viết nào
+                    <h3 className="font-semibold text-stone-800 dark:text-zinc-200">
+                      {searchQuery || selectedTag
+                        ? 'Không tìm thấy bài viết phù hợp'
+                        : activeTab === 'draft'
+                        ? 'Chưa có bản nháp nào'
+                        : 'Chưa có bài viết nào trong mục này'}
                     </h3>
                     <p className="text-sm text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
-                      {canEdit
-                        ? 'Thử thay đổi từ khóa tìm kiếm, bỏ bộ lọc hoặc bắt đầu viết một bài mới trong 30 phút ngay bây giờ.'
-                        : 'Thử thay đổi từ khóa tìm kiếm hoặc chọn một chủ đề khác để khám phá thêm.'}
+                      {searchQuery || selectedTag
+                        ? 'Hãy thử xóa bộ lọc hoặc tìm bằng từ khóa khác.'
+                        : 'Bắt đầu phiên viết 30 phút để lưu lại ý tưởng hoặc dự án mới nhất của bạn.'}
                     </p>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openNewEditor(activeTab === 'project' ? 'project' : 'knowledge')
-                        }
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:opacity-90 transition-opacity"
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      {(searchQuery || selectedTag) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery('');
+                            setSelectedTag('');
+                          }}
+                          className="px-4 py-2 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-700 hover:bg-stone-100 dark:hover:bg-zinc-800"
+                        >
+                          Xóa bộ lọc
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openNewEditor(activeTab === 'project' ? 'project' : 'knowledge')
+                          }
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Viết bài mới</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : activeTab === 'project' ? (
+                  /* GIAO DIỆN PORTFOLIO GRID 2 CỘT CHO TAB DỰ ÁN */
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    {filteredPosts.map((post) => (
+                      <article
+                        key={post.id}
+                        onClick={() => openReader(post)}
+                        className={`group cursor-pointer flex flex-col rounded-2xl border bg-white dark:bg-zinc-900/60 overflow-hidden hover:border-indigo-400/80 dark:hover:border-indigo-500/60 hover:shadow-lg transition-all ${
+                          post.isPinned
+                            ? 'border-amber-300/80 dark:border-amber-700/50 ring-1 ring-amber-400/20'
+                            : 'border-stone-200/80 dark:border-zinc-800'
+                        }`}
                       >
-                        <Plus className="w-4 h-4" />
-                        <span>Viết bài mới</span>
-                      </button>
-                    )}
+                        {/* Ảnh bìa lớn đầu thẻ dự án */}
+                        {post.coverImage ? (
+                          <div className="relative h-48 w-full overflow-hidden bg-stone-100 dark:bg-zinc-950 border-b border-stone-200/70 dark:border-zinc-800">
+                            <img
+                              src={post.coverImage}
+                              alt={post.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {post.projectStatus && (
+                              <span
+                                className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm ${getProjectStatusBadge(
+                                  post.projectStatus
+                                )}`}
+                              >
+                                {post.projectStatus}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative h-32 w-full bg-gradient-to-br from-indigo-50 via-stone-100 to-amber-50/70 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-950 border-b border-stone-200/70 dark:border-zinc-800 p-5 flex items-end justify-between">
+                            <div className="w-10 h-10 rounded-xl bg-white/90 dark:bg-zinc-900 border border-stone-200/80 dark:border-zinc-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+                              <FolderGit2 className="w-5 h-5" />
+                            </div>
+                            {post.projectStatus && (
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getProjectStatusBadge(
+                                  post.projectStatus
+                                )}`}
+                              >
+                                {post.projectStatus}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex-1 flex flex-col p-5">
+                          <div className="flex items-center justify-between gap-2 text-xs text-stone-500 dark:text-zinc-400 mb-2">
+                            <div className="flex items-center gap-1.5">
+                              {post.isPinned && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+                                  <Pin className="w-3 h-3" />
+                                  Nổi bật
+                                </span>
+                              )}
+                              {post.status === 'draft' && (
+                                <span className="px-2 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                                  Bản nháp
+                                </span>
+                              )}
+                              <span>{formatDateVN(post.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5">
+                              {(post.views || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Eye className="w-3.5 h-3.5" />
+                                  {post.views}
+                                </span>
+                              )}
+                              {(post.likes || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 text-rose-500">
+                                  <Heart className="w-3.5 h-3.5 fill-current" />
+                                  {post.likes}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <h2 className="text-lg font-bold text-stone-900 dark:text-zinc-50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-2 leading-snug">
+                            {post.title}
+                          </h2>
+
+                          <p className="text-sm text-stone-600 dark:text-zinc-400 line-clamp-3 leading-relaxed mb-4 flex-1">
+                            {post.summary}
+                          </p>
+
+                          {(post.tags || []).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                              {post.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 rounded-md text-xs font-medium bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div
+                            className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-stone-100 dark:border-zinc-800/80"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-2">
+                              {post.githubUrl && (
+                                <a
+                                  href={post.githubUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                  <GithubIcon className="w-3.5 h-3.5" />
+                                  <span>GitHub</span>
+                                </a>
+                              )}
+                              {post.demoUrl && (
+                                <a
+                                  href={post.demoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:opacity-90 transition-opacity"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>Demo</span>
+                                </a>
+                              )}
+                              {!post.githubUrl && !post.demoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => openReader(post)}
+                                  className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                >
+                                  <span>Xem chi tiết</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {canEdit && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTogglePin(post)}
+                                  title={post.isPinned ? 'Bỏ ghim' : 'Ghim lên đầu'}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    post.isPinned
+                                      ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50'
+                                      : 'text-stone-500 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800'
+                                  }`}
+                                >
+                                  <Pin className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditEditor(post)}
+                                  title="Chỉnh sửa"
+                                  className="p-1.5 rounded-lg text-stone-500 dark:text-zinc-400 hover:text-amber-600 hover:bg-stone-100 dark:hover:bg-zinc-800"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteTarget(post)}
+                                  title="Xóa"
+                                  className="p-1.5 rounded-lg text-stone-500 dark:text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 ) : (
                   <div className="grid gap-4">
@@ -2272,6 +2660,18 @@ export default function App() {
                                     <Clock className="w-3.5 h-3.5" />
                                     {calculateReadingTime(post.content)}
                                   </span>
+                                  {(post.views || 0) > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Eye className="w-3.5 h-3.5" />
+                                      {post.views}
+                                    </span>
+                                  )}
+                                  {(post.likes || 0) > 0 && (
+                                    <span className="flex items-center gap-1 text-rose-500 dark:text-rose-400">
+                                      <Heart className="w-3.5 h-3.5 fill-current" />
+                                      {post.likes}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -2402,7 +2802,10 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-3 mb-8 pb-4 border-b border-stone-200 dark:border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setView('home')}
+                  onClick={() => {
+                    setView('home');
+                    updateUrlHash('');
+                  }}
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -2412,7 +2815,7 @@ export default function App() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleCopyShareLink}
+                    onClick={() => handleCopyShareLink(selectedPost)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
                   >
                     <Share2 className="w-3.5 h-3.5" />
@@ -2544,6 +2947,11 @@ export default function App() {
                     <Clock className="w-4 h-4" />
                     {calculateReadingTime(selectedPost.content)}
                   </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Eye className="w-4 h-4" />
+                    {selectedPost.views || 1} lượt xem
+                  </span>
                 </div>
 
                 {/* Hộp liên kết dự án nếu là bài Dự án */}
@@ -2638,6 +3046,42 @@ export default function App() {
                   content={selectedPost.content}
                   onImageClick={(img) => setLightboxImage(img)}
                 />
+              </div>
+
+              {/* Thanh tương tác Thả tim & Chia sẻ link bài viết */}
+              <div className="flex flex-wrap items-center justify-between gap-3 py-4 px-5 rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLike(selectedPost)}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-95 ${
+                      likedPostIds.includes(selectedPost.id)
+                        ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400'
+                        : 'bg-stone-50 dark:bg-zinc-950 border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 hover:border-rose-300 hover:text-rose-600'
+                    }`}
+                  >
+                    <Heart
+                      className={`w-4 h-4 ${
+                        likedPostIds.includes(selectedPost.id) ? 'fill-current' : ''
+                      }`}
+                    />
+                    <span>
+                      {likedPostIds.includes(selectedPost.id) ? 'Đã thích' : 'Bài viết hữu ích'}
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full text-xs bg-black/5 dark:bg-white/10">
+                      {selectedPost.likes || 0}
+                    </span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopyShareLink(selectedPost)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-700 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Sao chép link bài viết</span>
+                </button>
               </div>
 
               {/* Thẻ cuối bài */}
@@ -2784,6 +3228,12 @@ export default function App() {
                 />
 
                 <div className="flex items-center gap-2">
+                  {autoSavedAt && (
+                    <span className="hidden lg:inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 mr-1">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Tự động lưu nháp lúc {new Date(autoSavedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
+                  )}
                   <button
                     type="button"
                     disabled={isSaving}
