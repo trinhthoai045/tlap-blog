@@ -1545,6 +1545,23 @@ export default function App() {
     };
   }, [visiblePosts, selectedPost]);
 
+  // Gợi ý tối đa 3 bài viết liên quan (ưu tiên trùng thẻ #tag, sau đó đến cùng danh mục)
+  const relatedPosts = useMemo(() => {
+    if (!selectedPost) return [];
+    const currentTags = new Set(selectedPost.tags || []);
+    return visiblePosts
+      .filter((p) => p.id !== selectedPost.id && p.status === 'published')
+      .map((p) => {
+        const sharedTagCount = (p.tags || []).filter((t) => currentTags.has(t)).length;
+        const sameCategory = p.category === selectedPost.category ? 1 : 0;
+        const score = sharedTagCount * 10 + sameCategory;
+        return { post: p, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || (b.post.createdAt || 0) - (a.post.createdAt || 0))
+      .slice(0, 3)
+      .map((item) => item.post);
+  }, [visiblePosts, selectedPost]);
   // --------------------------------------------------------------------------
   // XÁC THỰC ADMIN
   // --------------------------------------------------------------------------
@@ -3254,6 +3271,93 @@ export default function App() {
                     </button>
                   )}
                 </div>
+              )}
+
+              {/* Khu vực Gợi ý Bài viết liên quan cuối trang */}
+              {relatedPosts.length > 0 && (
+                <section className="mt-10 pt-8 border-t border-stone-200/80 dark:border-zinc-800/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base sm:text-lg font-bold text-stone-900 dark:text-zinc-50 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>Bài viết liên quan</span>
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView('home');
+                        updateUrlHash('');
+                      }}
+                      className="text-xs font-medium text-stone-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                    >
+                      Xem tất cả →
+                    </button>
+                  </div>
+
+                  <div className="grid sm:grid-cols-3 gap-3.5">
+                    {relatedPosts.map((relPost) => {
+                      const isRelProject = relPost.category === 'project';
+                      return (
+                        <article
+                          key={relPost.id}
+                          onClick={() => openReader(relPost)}
+                          className="group cursor-pointer flex flex-col rounded-2xl border border-stone-200/80 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/50 overflow-hidden hover:border-amber-400/70 dark:hover:border-amber-500/50 hover:shadow-md transition-all"
+                        >
+                          {relPost.coverImage && (
+                            <div className="h-28 w-full overflow-hidden bg-stone-100 dark:bg-zinc-950 border-b border-stone-200/60 dark:border-zinc-800">
+                              <img
+                                src={relPost.coverImage}
+                                alt={relPost.title}
+                                loading="lazy"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                          )}
+
+                          <div className="p-4 flex-1 flex flex-col">
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-stone-500 dark:text-zinc-400 mb-1.5">
+                              {isRelProject ? (
+                                <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                                  <FolderGit2 className="w-3 h-3" />
+                                  Dự án
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1">
+                                  <BookOpen className="w-3 h-3" />
+                                  Kiến thức
+                                </span>
+                              )}
+                              <span>•</span>
+                              <span>{calculateReadingTime(relPost.content)}</span>
+                            </div>
+
+                            <h3 className="text-sm font-bold text-stone-900 dark:text-zinc-100 group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug mb-2">
+                              {relPost.title}
+                            </h3>
+
+                            {relPost.summary && (
+                              <p className="text-xs text-stone-500 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-3 flex-1">
+                                {relPost.summary}
+                              </p>
+                            )}
+
+                            {(relPost.tags || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-2 border-t border-stone-100 dark:border-zinc-800/80">
+                                {relPost.tags.slice(0, 2).map((t) => (
+                                  <span
+                                    key={t}
+                                    className="px-1.5 py-0.5 rounded text-[10px] bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400"
+                                  >
+                                    #{t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
               )}
 
               {/* Hộp liên hệ tác giả cuối bài viết */}
